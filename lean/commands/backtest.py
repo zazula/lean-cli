@@ -279,9 +279,13 @@ def _migrate_csharp_csproj(project_dir: Path) -> None:
               help="Extra docker configuration as a JSON string. "
                    "For more information https://docker-py.readthedocs.io/en/stable/containers.html")
 @option("--no-update",
-              is_flag=True,
-              default=False,
-              help="Use the local LEAN engine image instead of pulling the latest version")
+        is_flag=True,
+        default=False,
+        help="Use the local LEAN engine image instead of pulling the latest version")
+@option("--time-scale", "--timescale",
+        type=float,
+        default=None,
+        help="Time scale factor for pseudo-live mode (e.g., 2 for 2× speed, 0.5 for half speed). If omitted, runs as fast as possible.")
 def backtest(project: Path,
              output: Optional[Path],
              detach: bool,
@@ -298,6 +302,7 @@ def backtest(project: Path,
              extra_config: Optional[Tuple[str, str]],
              extra_docker_config: Optional[str],
              no_update: bool,
+             time_scale: Optional[float],
              **kwargs) -> None:
     """Backtest a project locally using Docker.
 
@@ -406,4 +411,5 @@ def backtest(project: Path,
                          release,
                          detach,
                          loads(extra_docker_config),
-                         paths_to_mount)
+                         paths_to_mount,
+                         time_scale=time_scale)

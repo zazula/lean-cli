@@ -74,7 +74,8 @@ class LeanRunner:
                  release: bool,
                  detach: bool,
                  extra_docker_config: Optional[Dict[str, Any]] = None,
-                 paths_to_mount: Optional[Dict[str, str]] = None) -> None:
+                 paths_to_mount: Optional[Dict[str, str]] = None,
+                 time_scale: Optional[float] = None) -> None:
         """Runs the LEAN engine locally in Docker.
 
         Raises an error if something goes wrong.
@@ -91,8 +92,19 @@ class LeanRunner:
         :param paths_to_mount: additional paths to mount to the container
         """
         self._logger.debug(f'LeanRunner().run_lean: lean_config: {lean_config}')
+        # Verbose logging for time-scale setting
+        if self._logger.debug_logging_enabled:
+            if time_scale is not None:
+                self._logger.debug(f"Time-scale factor specified: {time_scale}x (pausing enabled)")
+            else:
+                self._logger.debug("No time-scale specified; running at maximum speed (pausing disabled)")
         project_dir = algorithm_file.parent
 
+        # General info logging for time-scale
+        if time_scale is not None:
+            self._logger.info(f"Using time-scale factor: {time_scale}x")
+        else:
+            self._logger.info("Running at maximum speed (no pausing)")
         # The dict containing all options passed to `docker run`
         # See all available options at https://docker-py.readthedocs.io/en/stable/containers.html
         run_options = self.get_basic_docker_config(lean_config,
@@ -137,7 +149,11 @@ class LeanRunner:
         if debugging_method == DebuggingMethod.LocalPlatform:
             run_options["ports"]["5678"] = "0" # Using port 0 will assign a random port every time
 
-        run_options["commands"].append("exec dotnet QuantConnect.Lean.Launcher.dll")
+        # build the engine start command, injecting time-scale if requested
+        command = "exec dotnet QuantConnect.Lean.Launcher.dll"
+        if time_scale is not None:
+            command += f" --time-scale {time_scale}"
+        run_options["commands"].append(command)
 
         # Copy the project's code to the output directory
         self._project_manager.copy_code(algorithm_file.parent, output_dir / "code")
